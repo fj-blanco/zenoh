@@ -39,6 +39,8 @@ use zenoh_result::{bail, zerror, ZError, ZResult};
 
 use crate::config::*;
 
+use rustls::crypto::CryptoProvider;
+
 #[derive(Default, Clone, Copy, Debug)]
 pub struct TlsConfigurator;
 
@@ -190,6 +192,7 @@ impl TlsServerConfig {
             bail!("No private key found for TLS server.");
         }
 
+        /*
         // Install ring based rustls CryptoProvider.
         rustls::crypto::ring::default_provider()
             // This can be called successfully at most once in any process execution.
@@ -199,6 +202,15 @@ impl TlsServerConfig {
             // Ignore the error here, because `rustls::crypto::ring::default_provider().install_default()` will inevitably be executed multiple times
             // when there are multiple quic links, and all but the first execution will fail.
             .ok();
+        */
+        //rustls_post_quantum::provider().install_default().unwrap();
+        let pq_provider = rustls_post_quantum::provider();
+        let crypto_provider = CryptoProvider {
+            kx_groups: vec![
+                &rustls_post_quantum::X25519Kyber768Draft00,
+            ],
+            ..pq_provider
+        };
 
         let sc = if tls_server_client_auth {
             let root_cert_store = load_trust_anchors(config)?.map_or_else(
@@ -210,12 +222,16 @@ impl TlsServerConfig {
                 Ok,
             )?;
             let client_auth = WebPkiClientVerifier::builder(root_cert_store.into()).build()?;
-            ServerConfig::builder_with_protocol_versions(&[&TLS13])
+            ServerConfig::builder_with_provider(Arc::new(crypto_provider))
+                .with_protocol_versions(&[&TLS13])
+                .expect("Inconsistent cipher-suite/versions specified")
                 .with_client_cert_verifier(client_auth)
                 .with_single_cert(certs, keys.remove(0))
                 .map_err(|e| zerror!(e))?
         } else {
-            ServerConfig::builder()
+            ServerConfig::builder_with_provider(Arc::new(crypto_provider))
+                .with_protocol_versions(&[&TLS13])
+                .expect("Inconsistent cipher-suite/versions specified")
                 .with_no_client_auth()
                 .with_single_cert(certs, keys.remove(0))
                 .map_err(|e| zerror!(e))?
@@ -280,7 +296,7 @@ impl TlsClientConfig {
             tracing::debug!("Loading user-generated certificates.");
             root_cert_store.extend(custom_root_cert.roots);
         }
-
+        /*
         // Install ring based rustls CryptoProvider.
         rustls::crypto::ring::default_provider()
             // This can be called successfully at most once in any process execution.
@@ -290,6 +306,15 @@ impl TlsClientConfig {
             // Ignore the error here, because `rustls::crypto::ring::default_provider().install_default()` will inevitably be executed multiple times
             // when there are multiple quic links, and all but the first execution will fail.
             .ok();
+        */
+        //rustls_post_quantum::provider().install_default().unwrap();
+        let pq_provider = rustls_post_quantum::provider();
+        let crypto_provider = CryptoProvider {
+            kx_groups: vec![
+                &rustls_post_quantum::X25519Kyber768Draft00,
+            ],
+            ..pq_provider
+        };
 
         let cc = if tls_client_server_auth {
             tracing::debug!("Loading client authentication key and certificate...");
@@ -326,7 +351,9 @@ impl TlsClientConfig {
                 bail!("No private key found for TLS client.");
             }
 
-            let builder = ClientConfig::builder_with_protocol_versions(&[&TLS13]);
+            let builder = ClientConfig::builder_with_provider(Arc::new(crypto_provider.clone()))
+                .with_protocol_versions(&[&TLS13])
+                .expect("Inconsistent cipher-suite/versions specified");
 
             if tls_server_name_verification {
                 builder
@@ -337,12 +364,15 @@ impl TlsClientConfig {
                     .dangerous()
                     .with_custom_certificate_verifier(Arc::new(WebPkiVerifierAnyServerName::new(
                         root_cert_store,
+                        Some(crypto_provider.clone()),
                     )))
                     .with_client_auth_cert(certs, keys.remove(0))
             }
             .map_err(|e| zerror!("Bad certificate/key: {}", e))?
         } else {
-            let builder = ClientConfig::builder();
+            let builder = ClientConfig::builder_with_provider(Arc::new(crypto_provider.clone()))
+                .with_protocol_versions(&[&TLS13])
+                .expect("Inconsistent cipher-suite/versions specified");
             if tls_server_name_verification {
                 builder
                     .with_root_certificates(root_cert_store)
@@ -352,6 +382,7 @@ impl TlsClientConfig {
                     .dangerous()
                     .with_custom_certificate_verifier(Arc::new(WebPkiVerifierAnyServerName::new(
                         root_cert_store,
+                        Some(crypto_provider.clone()),
                     )))
                     .with_no_client_auth()
             }

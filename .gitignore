@@ -22,3 +22,7 @@
 cargo-timing*.html
 
 ci/valgrind-check/*.log
+
+# Certs related
+*.pem
+*.key

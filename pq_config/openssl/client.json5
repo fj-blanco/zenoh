@@ -1,0 +1,16 @@
+{
+  "mode": "client",
+  "connect": {
+    "endpoints": ["tls/127.0.0.1:7447"]
+  },
+  "transport": {
+    "link": {
+      "tls": {
+        "root_ca_certificate": "./certs/openssl/ca.pem",
+        "connect_private_key": "./certs/openssl/client.key",
+        "connect_certificate": "./certs/openssl/client.pem",
+        "enable_mtls": true
+      }
+    }
+  }
+}
