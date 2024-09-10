@@ -1,0 +1,17 @@
+{
+  "mode": "router",
+  "listen": {
+    "endpoints": ["tls/127.0.0.1:7447"]
+  },
+  "transport": {
+    "link": {
+      "tls": {
+        "root_ca_certificate": "./certs/keystore/enclaves/zenoh_router/identity_ca.cert.pem",
+        "server_private_key": "./certs/keystore/enclaves/zenoh_router/key.pem",
+        "server_certificate": "./certs/keystore/enclaves/zenoh_router/cert.pem",
+        "client_auth": true,
+        "server_name_verification": false
+      }
+    }
+  }
+}

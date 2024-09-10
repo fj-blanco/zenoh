@@ -1,0 +1,14 @@
+{
+  "mode": "router",
+  "listen": {
+    "endpoints": ["tls/127.0.0.1:7447"]
+  },
+  "transport": {
+    "link": {
+      "tls": {
+        "server_private_key": "./certs/openssl/server.key",
+        "server_certificate": "./certs/openssl/server.fullchain.pem"
+      }
+    }
+  }
+}

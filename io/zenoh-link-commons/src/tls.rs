@@ -11,6 +11,7 @@ use rustls::{
     RootCertStore,
 };
 use webpki::ALL_VERIFICATION_ALGS;
+use rustls::crypto::CryptoProvider;
 
 impl ServerCertVerifier for WebPkiVerifierAnyServerName {
     /// Will verify the certificate is valid in the following ways:
@@ -41,12 +42,12 @@ impl ServerCertVerifier for WebPkiVerifierAnyServerName {
         cert: &CertificateDer<'_>,
         dss: &rustls::DigitallySignedStruct,
     ) -> Result<rustls::client::danger::HandshakeSignatureValid, rustls::Error> {
-        verify_tls12_signature(
-            message,
-            cert,
-            dss,
-            &rustls::crypto::ring::default_provider().signature_verification_algorithms,
-        )
+        let default_provider = rustls::crypto::ring::default_provider();
+        let algorithms = self.crypto_provider
+            .as_ref()
+            .map(|cp| &cp.signature_verification_algorithms)
+            .unwrap_or(&default_provider.signature_verification_algorithms);
+        verify_tls12_signature(message, cert, dss, algorithms)
     }
 
     fn verify_tls13_signature(
@@ -55,18 +56,19 @@ impl ServerCertVerifier for WebPkiVerifierAnyServerName {
         cert: &CertificateDer<'_>,
         dss: &rustls::DigitallySignedStruct,
     ) -> Result<rustls::client::danger::HandshakeSignatureValid, rustls::Error> {
-        verify_tls13_signature(
-            message,
-            cert,
-            dss,
-            &rustls::crypto::ring::default_provider().signature_verification_algorithms,
-        )
+        let default_provider = rustls::crypto::ring::default_provider();
+        let algorithms = self.crypto_provider
+            .as_ref()
+            .map(|cp| &cp.signature_verification_algorithms)
+            .unwrap_or(&default_provider.signature_verification_algorithms);
+        verify_tls13_signature(message, cert, dss, algorithms)
     }
 
     fn supported_verify_schemes(&self) -> Vec<rustls::SignatureScheme> {
-        rustls::crypto::ring::default_provider()
-            .signature_verification_algorithms
-            .supported_schemes()
+        self.crypto_provider
+            .as_ref()
+            .map(|cp| cp.signature_verification_algorithms.supported_schemes())
+            .unwrap_or_else(|| rustls::crypto::ring::default_provider().signature_verification_algorithms.supported_schemes())
     }
 }
 
@@ -75,14 +77,12 @@ impl ServerCertVerifier for WebPkiVerifierAnyServerName {
 #[derive(Debug)]
 pub struct WebPkiVerifierAnyServerName {
     roots: RootCertStore,
+    crypto_provider: Option<CryptoProvider>,
 }
 
 #[allow(unreachable_pub)]
 impl WebPkiVerifierAnyServerName {
-    /// Constructs a new `WebPkiVerifierAnyServerName`.
-    ///
-    /// `roots` is the set of trust anchors to trust for issuing server certs.
-    pub fn new(roots: RootCertStore) -> Self {
-        Self { roots }
+    pub fn new(roots: RootCertStore, crypto_provider: Option<CryptoProvider>) -> Self {
+        Self { roots, crypto_provider }
     }
 }
