@@ -6,8 +6,10 @@
   "transport": {
     "link": {
       "tls": {
-        "server_private_key": "./certs/openssl/server.key",
-        "server_certificate": "./certs/openssl/server.fullchain.pem"
+        "listen_private_key": "./certs/openssl/server.key",
+        "listen_certificate": "./certs/openssl/server.fullchain.pem",
+        "root_ca_certificate": "./certs/openssl/ca.pem",
+        "enable_mtls": true
       }
     }
   }

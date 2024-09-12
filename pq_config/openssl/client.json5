@@ -7,8 +7,9 @@
     "link": {
       "tls": {
         "root_ca_certificate": "./certs/openssl/ca.pem",
-        "client_private_key": "./certs/openssl/client.key",
-        "client_certificate": "./certs/openssl/client.pem"
+        "connect_private_key": "./certs/openssl/client.key",
+        "connect_certificate": "./certs/openssl/client.pem",
+        "enable_mtls": true
       }
     }
   }
